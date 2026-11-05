@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct MainTabView: View {
+    let session: AuthSession
+    let onLogout: () -> Void
+
     var body: some View {
         TabView {
             Tab("Home", systemImage: "house") {
@@ -20,10 +23,16 @@ struct MainTabView: View {
                     CounterScreen()
                 }
             }
+
+            Tab("Profile", systemImage: "person.crop.circle") {
+                NavigationStack {
+                    ProfileScreen(session: session, onLogout: onLogout)
+                }
+            }
         }
     }
 }
 
 #Preview {
-    MainTabView()
+    MainTabView(session: AuthSession(token: "preview", expiresAt: .distantFuture)) {}
 }
