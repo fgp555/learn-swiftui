@@ -1,19 +1,29 @@
-//
-//  ContentView.swift
-//  myapp
-//
-//  Created by m1 on 05/11/2026.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @State private var puntos = 0
+    @State private var mensajeEnviado: String?
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        VStack(spacing: 16) {
+            Text("Puntos: \(puntos)")
+                .font(.largeTitle)
+
+            Button("Sumar 1") {
+                puntos += 1
+            }
+
+            Button("Escribir log") {
+                print("[myapp] Puntos actuales: \(puntos)")
+            }
+
+            FormularioTexto { mensaje in
+                mensajeEnviado = mensaje
+            }
+
+            if let mensajeEnviado {
+                Text("Último mensaje: \(mensajeEnviado)")
+            }
         }
         .padding()
     }
