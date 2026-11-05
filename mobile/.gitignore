@@ -1,5 +1,5 @@
 # Archivos de compilación
-/.build/
+.build/
 /DerivedData/
 
 # Configuración local de Xcode
