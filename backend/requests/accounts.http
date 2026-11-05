@@ -1,0 +1,30 @@
+@baseUrl = http://127.0.0.1:8080
+@email = swift-test@example.com
+@password = 1234
+
+### Registrar cuenta de práctica · 201
+POST {{baseUrl}}/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Login con la cuenta de práctica · 200
+# @name accountLogin
+POST {{baseUrl}}/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Eliminar la cuenta de práctica y sus sesiones · 204
+DELETE {{baseUrl}}/v1/auth/me
+Authorization: Bearer {{accountLogin.response.body.$.token}}
+
+### Comprobar que la sesión quedó invalidada · 401
+GET {{baseUrl}}/v1/auth/me
+Authorization: Bearer {{accountLogin.response.body.$.token}}

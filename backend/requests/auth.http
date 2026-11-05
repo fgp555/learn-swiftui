@@ -1,0 +1,24 @@
+@baseUrl = http://127.0.0.1:8080
+@email = demo@example.com
+
+### Login · 200
+# @name login
+POST {{baseUrl}}/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "demo"
+}
+
+### Consultar perfil · 200
+GET {{baseUrl}}/v1/auth/me
+Authorization: Bearer {{login.response.body.$.token}}
+
+### Cerrar sesión · 204
+POST {{baseUrl}}/v1/auth/logout
+Authorization: Bearer {{login.response.body.$.token}}
+
+### Consultar perfil con el mismo token revocado · 401
+GET {{baseUrl}}/v1/auth/me
+Authorization: Bearer {{login.response.body.$.token}}

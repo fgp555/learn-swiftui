@@ -1,0 +1,26 @@
+@baseUrl = http://127.0.0.1:8080
+@email = demo@example.com
+
+### Contraseña incorrecta · 401 invalid_credentials
+POST {{baseUrl}}/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "wrong-password-for-this-test"
+}
+
+### Falta la contraseña · 400 invalid_request
+POST {{baseUrl}}/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}"
+}
+
+### Perfil sin token · 401 invalid_session
+GET {{baseUrl}}/v1/auth/me
+
+### Logout con token inválido · 401 invalid_session
+POST {{baseUrl}}/v1/auth/logout
+Authorization: Bearer invalid-token
