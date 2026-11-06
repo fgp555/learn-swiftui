@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"bytes"
 	"encoding/json"
+	"image"
+	"image/jpeg"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -14,7 +17,8 @@ import (
 )
 
 func TestSessionFlow(t *testing.T) {
-	db, err := sqlite.Open(t.Context(), filepath.Join(t.TempDir(), "test.sqlite"))
+	dbPath := filepath.Join(t.TempDir(), "test.sqlite")
+	db, err := sqlite.Open(t.Context(), dbPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,10 +77,10 @@ func TestSessionFlow(t *testing.T) {
 
 	active := readSession(login(" DEMO@example.com ", password, http.StatusOK))
 	request(http.MethodGet, "me", "", "", http.StatusUnauthorized)
-	profile := request(http.MethodGet, "me", "", active.Token, http.StatusOK)
+	profileResponse := request(http.MethodGet, "me", "", active.Token, http.StatusOK)
 	var user User
-	if err := json.Unmarshal(profile.Body.Bytes(), &user); err != nil || user.Email != email || user.ID == 0 {
-		t.Fatalf("unexpected profile: %s", profile.Body)
+	if err := json.Unmarshal(profileResponse.Body.Bytes(), &user); err != nil || user.Email != email || user.ID == 0 {
+		t.Fatalf("unexpected profile: %s", profileResponse.Body)
 	}
 
 	request(http.MethodPost, "logout", "", active.Token, http.StatusNoContent)
@@ -91,6 +95,63 @@ func TestSessionFlow(t *testing.T) {
 	}
 	demo := readSession(login(email, "demo", http.StatusOK))
 	request(http.MethodGet, "me", "", demo.Token, http.StatusOK)
+
+	readProfile := func(w *httptest.ResponseRecorder) userProfile {
+		t.Helper()
+		var profile userProfile
+		if err := json.Unmarshal(w.Body.Bytes(), &profile); err != nil {
+			t.Fatal(err)
+		}
+		return profile
+	}
+	profile := readProfile(request(http.MethodGet, "me", "", demo.Token, http.StatusOK))
+	if profile.DisplayName != "Demo" || profile.AvatarURL == nil ||
+		*profile.AvatarURL != "https://github.com/fgp555.png" || profile.HasUploadedAvatar {
+		t.Fatalf("unexpected demo profile: %+v", profile)
+	}
+	request(http.MethodPatch, "me", `{"display_name":"Taylor"}`, "", http.StatusUnauthorized)
+	profile = readProfile(request(http.MethodPatch, "me", `{"display_name":" Taylor "}`, demo.Token, http.StatusOK))
+	if profile.DisplayName != "Taylor" || profile.AvatarURL == nil {
+		t.Fatalf("name-only edits should keep the avatar: %+v", profile)
+	}
+
+	request(http.MethodPatch, "me", `{"display_name":"Taylor","avatar_jpeg":"YWJj"}`, demo.Token, http.StatusBadRequest)
+	var jpegData bytes.Buffer
+	if err := jpeg.Encode(&jpegData, image.NewRGBA(image.Rect(0, 0, 1, 1)), nil); err != nil {
+		t.Fatal(err)
+	}
+	body, err := json.Marshal(profileUpdate{DisplayName: "Taylor", AvatarJPEG: jpegData.Bytes()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile = readProfile(request(http.MethodPatch, "me", string(body), demo.Token, http.StatusOK))
+	if profile.ID == 0 || profile.Email != email || profile.AvatarURL != nil || !profile.HasUploadedAvatar {
+		t.Fatalf("unexpected uploaded profile: %+v", profile)
+	}
+	request(http.MethodGet, "me/avatar", "", "", http.StatusUnauthorized)
+	avatar := request(http.MethodGet, "me/avatar", "", demo.Token, http.StatusOK)
+	if !bytes.Equal(avatar.Body.Bytes(), jpegData.Bytes()) || avatar.Header().Get("Content-Type") != "image/jpeg" {
+		t.Fatal("unexpected avatar response")
+	}
+
+	request(http.MethodPatch, "me", `{"display_name":"Taylor","remove_avatar":true}`, demo.Token, http.StatusOK)
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := sqlite.Open(t.Context(), dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	service.db = reopened
+	if err := service.SeedDemo(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	profile = readProfile(request(http.MethodGet, "me", "", demo.Token, http.StatusOK))
+	if profile.DisplayName != "Taylor" || profile.AvatarURL != nil || profile.HasUploadedAvatar {
+		t.Fatalf("demo seed overwrote profile edits: %+v", profile)
+	}
+	request(http.MethodGet, "me/avatar", "", demo.Token, http.StatusNotFound)
 
 	const newEmail = "swift@example.com"
 	const registration = `{"email":"swift@example.com","password":"1234"}`

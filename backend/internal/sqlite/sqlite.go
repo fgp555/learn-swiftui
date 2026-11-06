@@ -28,6 +28,16 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 			user_id INTEGER NOT NULL REFERENCES users(id),
 			expires_at INTEGER NOT NULL
 		);
+		CREATE TABLE IF NOT EXISTS profiles (
+			user_id INTEGER PRIMARY KEY REFERENCES users(id),
+			display_name TEXT NOT NULL,
+			avatar_url TEXT,
+			avatar_jpeg BLOB
+		);
+		CREATE TRIGGER IF NOT EXISTS delete_user_profile
+		AFTER DELETE ON users BEGIN
+			DELETE FROM profiles WHERE user_id = OLD.id;
+		END;
 		CREATE TRIGGER IF NOT EXISTS delete_user_sessions
 		AFTER DELETE ON users BEGIN
 			DELETE FROM sessions WHERE user_id = OLD.id;

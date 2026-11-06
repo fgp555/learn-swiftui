@@ -42,7 +42,9 @@ curl -i -X POST http://127.0.0.1:8080/v1/auth/logout \
 | --- | --- |
 | `POST /v1/auth/register` | Recibe `email` y `password` de al menos cuatro caracteres. Devuelve `201` con `id` y `email`, `400` para datos inválidos o `409` si el correo ya existe. |
 | `POST /v1/auth/login` | `200` con `token` y `expires_at` en RFC 3339. `400` para una petición inválida o `401` para credenciales incorrectas. |
-| `GET /v1/auth/me` | `200` con `id` y `email`, o `401` si la sesión no es válida. |
+| `GET /v1/auth/me` | `200` con `id`, `email`, `display_name`, `avatar_url` y `has_uploaded_avatar`, o `401` si la sesión no es válida. |
+| `PATCH /v1/auth/me` | Guarda `display_name` y devuelve el perfil actualizado. Opcionalmente acepta `avatar_jpeg` en base64 (JPEG de hasta 1 MiB) o `remove_avatar: true`. |
+| `GET /v1/auth/me/avatar` | Devuelve el JPEG subido con el Bearer token o `404` si el perfil carece de foto subida. |
 | `DELETE /v1/auth/me` | Requiere Bearer token. Devuelve `204` al eliminar la cuenta autenticada y todas sus sesiones, o `401` si el token es inválido. |
 | `POST /v1/auth/logout` | `204` después de revocar la sesión, o `401` si la sesión no es válida. |
 
@@ -52,7 +54,7 @@ Los errores incluyen un campo JSON `error`. Cada token es aleatorio, dura 24 hor
 
 Con el servidor encendido, abre `requests/auth.http` y pulsa **Send Request** sobre cada solicitud en orden. El login usa las credenciales demo y las siguientes solicitudes toman el token de esa respuesta.
 
-`requests/accounts.http` registra un usuario de práctica, inicia sesión y elimina esa cuenta. `requests/auth-errors.http` contiene casos de error que puedes ejecutar por separado.
+`requests/profile.http` prueba edición de nombre, subida y eliminación de avatar. `requests/accounts.http` registra un usuario de práctica, inicia sesión y elimina esa cuenta. `requests/auth-errors.http` contiene casos de error que puedes ejecutar por separado.
 
 ## Pruebas
 

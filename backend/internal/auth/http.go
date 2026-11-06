@@ -16,6 +16,8 @@ func (s *Service) RegisterRoutes(routes *gin.RouterGroup) {
 	routes.POST("/register", s.handleRegister)
 	routes.POST("/login", s.handleLogin)
 	routes.GET("/me", s.handleMe)
+	routes.PATCH("/me", s.handleUpdateProfile)
+	routes.GET("/me/avatar", s.handleAvatar)
 	routes.HEAD("/me", s.handleMe)
 	routes.DELETE("/me", s.handleDeleteAccount)
 	routes.POST("/logout", s.handleLogout)
@@ -77,7 +79,7 @@ func (s *Service) handleMe(c *gin.Context) {
 		handleError(c, err)
 		return
 	}
-	user, err := s.currentUser(c.Request.Context(), token)
+	user, err := s.profile(c.Request.Context(), token)
 	if err != nil {
 		handleError(c, err)
 		return

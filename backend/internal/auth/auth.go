@@ -49,7 +49,15 @@ func (s *Service) CreateUser(ctx context.Context, email, password string) (User,
 }
 
 func (s *Service) SeedDemo(ctx context.Context) error {
-	_, err := s.saveUser(ctx, "demo@example.com", "demo", true)
+	user, err := s.saveUser(ctx, "demo@example.com", "demo", true)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO profiles (user_id, display_name, avatar_url)
+		VALUES (?, 'Demo', 'https://github.com/fgp555.png')
+		ON CONFLICT(user_id) DO NOTHING
+	`, user.ID)
 	return err
 }
 
@@ -107,20 +115,6 @@ func (s *Service) login(ctx context.Context, email, password string) (session, e
 		return session{}, err
 	}
 	return session{Token: token, ExpiresAt: expiresAt}, nil
-}
-
-func (s *Service) currentUser(ctx context.Context, token string) (User, error) {
-	digest := sha256.Sum256([]byte(token))
-	var user User
-	err := s.db.QueryRowContext(ctx, `
-		SELECT users.id, users.email
-		FROM sessions JOIN users ON users.id = sessions.user_id
-		WHERE sessions.token_hash = ? AND sessions.expires_at > ?
-	`, digest[:], s.now().Unix()).Scan(&user.ID, &user.Email)
-	if errors.Is(err, sql.ErrNoRows) {
-		return User{}, errUnauthorized
-	}
-	return user, err
 }
 
 func (s *Service) logout(ctx context.Context, token string) error {

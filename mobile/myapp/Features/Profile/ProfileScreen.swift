@@ -2,23 +2,39 @@ import SwiftUI
 
 struct ProfileScreen: View {
     let session: AuthSession
+    let profile: UserProfile?
+    let avatar: UIImage?
+    let isLoadingProfile: Bool
+    let profileError: String?
+    let onRetry: () async -> Void
+    let onSave: (UserProfile) -> Void
     let onLogout: () -> Void
 
-    @State private var email: String?
-    @State private var isLoadingProfile = true
+    @State private var isEditing = false
     @State private var isLoggingOut = false
     @State private var errorMessage: String?
 
     var body: some View {
         Form {
             Section("Cuenta") {
-                if let email {
-                    LabeledContent("Correo electrónico", value: email)
+                if let profile {
+                    VStack(spacing: 8) {
+                        ProfileAvatar(initials: profile.initials, image: avatar)
+
+                        Text(profile.displayName.isEmpty ? "Sin nombre" : profile.displayName)
+                            .font(.title2.bold())
+                        Text(profile.email)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    Button("Editar perfil") { isEditing = true }
+                        .disabled(isLoggingOut)
                 } else if isLoadingProfile {
                     ProgressView("Cargando perfil…")
                 } else {
                     Button("Reintentar") {
-                        Task { await loadProfile() }
+                        Task { await onRetry() }
                     }
                     .disabled(isLoggingOut)
                 }
@@ -32,32 +48,22 @@ struct ProfileScreen: View {
                     ProgressView("Cerrando sesión…")
                 }
 
-                if let errorMessage {
+                if let errorMessage = errorMessage ?? profileError {
                     Text(errorMessage)
                         .foregroundStyle(.red)
                 }
             }
         }
         .navigationTitle("Profile")
-        .task {
-            if email == nil {
-                await loadProfile()
-            }
-        }
-    }
-
-    private func loadProfile() async {
-        isLoadingProfile = true
-        errorMessage = nil
-        defer { isLoadingProfile = false }
-
-        do {
-            email = try await AuthAPI().profile(token: session.token).email
-        } catch AuthAPI.RequestError.invalidSession {
-            onLogout()
-        } catch {
-            if !Task.isCancelled {
-                errorMessage = "No se pudo cargar el perfil. Inténtalo de nuevo."
+        .sheet(isPresented: $isEditing) {
+            if let profile {
+                EditProfileScreen(
+                    profile: profile,
+                    currentAvatar: avatar,
+                    token: session.token,
+                    onSave: onSave,
+                    onExpired: onLogout
+                )
             }
         }
     }
