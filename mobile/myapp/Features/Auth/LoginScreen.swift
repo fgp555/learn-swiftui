@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct LoginScreen: View {
-    let onLogin: (AuthSession) -> Void
+    let onLogin: (AuthSession) throws -> Void
 
     @State private var email = "demo@example.com"
     @State private var password = "demo"
@@ -62,8 +62,10 @@ struct LoginScreen: View {
             defer { isSubmitting = false }
             do {
                 let session = try await AuthAPI().login(email: trimmedEmail, password: password)
-                onLogin(session)
+                try onLogin(session)
             } catch let error as AuthAPI.RequestError {
+                errorMessage = error.localizedDescription
+            } catch let error as SessionKeychain.Failure {
                 errorMessage = error.localizedDescription
             } catch is URLError {
                 errorMessage = "No se pudo conectar. Comprueba que el backend esté encendido."

@@ -1,6 +1,6 @@
 import Foundation
 
-struct AuthSession: Decodable {
+struct AuthSession: Codable {
     let token: String
     let expiresAt: Date
 }

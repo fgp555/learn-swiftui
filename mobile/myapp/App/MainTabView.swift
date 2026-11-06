@@ -10,6 +10,13 @@ struct MainTabView: View {
     @State private var avatar: UIImage?
     @State private var avatarRevision = 0
 
+    init(session: AuthSession, initialProfile: UserProfile? = nil, onLogout: @escaping () -> Void) {
+        self.session = session
+        self.onLogout = onLogout
+        _profile = State(initialValue: initialProfile)
+        _isLoadingProfile = State(initialValue: initialProfile == nil)
+    }
+
     var body: some View {
         TabView {
             Tab("Home", systemImage: "house") {
